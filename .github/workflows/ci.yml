@@ -242,6 +242,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.devops == 'true' || github.event_name == 'push'
     runs-on: ubuntu-latest
+    continue-on-error: false
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -256,11 +257,42 @@ jobs:
         run: npm ci
 
       - name: Check runtime drift
+        id: drift
         run: npm run check-drift
 
       - name: Check dependency integrity
+        id: integrity
         run: npm run check-integrity
 
+      - name: Write job summary
+        if: always()
+        run: |
+          echo "## DevOps Gate Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.drift.outcome }}" = "success" ]; then
+            echo "✅ **Runtime drift check**: passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Runtime drift check**: failed — ports/URLs in docs or .env.example are out of sync with \`packages/api-contracts/src/runtime-defaults.ts\`. Run \`npm run check-drift\` locally to see details." >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ "${{ steps.integrity.outcome }}" = "success" ]; then
+            echo "✅ **Dependency integrity check**: passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Dependency integrity check**: failed — lockfile or workspace dependency versions are inconsistent. Run \`npm run check-integrity\` locally to see details." >> $GITHUB_STEP_SUMMARY
+          fi
+
+  required-checks:
+    name: Required Checks
+    needs: [devops]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assert devops gate passed
+        run: |
+          if [ "${{ needs.devops.result }}" != "success" ] && [ "${{ needs.devops.result }}" != "skipped" ]; then
+            echo "❌ DevOps gate failed. Drift or integrity checks must pass before merge."
+            exit 1
+          fi
+          echo "✅ All required checks passed."
   # DEVOPS-201: Full-stack Wave integration gate.
   # Runs after all per-layer jobs and fails the PR if any layer regresses.
   wave-integration:
