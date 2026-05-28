@@ -150,6 +150,35 @@ soroban-dev-console/
 - `/src/auth` - Authentication guards
 - `/prisma` - Database schema, migrations, and seeds
 
+## CI Gates
+
+Every pull request must pass the **Required Checks** gate before it can be merged. This gate depends on the **DevOps** job, which runs two mandatory checks:
+
+### Runtime Drift Check (`npm run check-drift`)
+
+Verifies that all documented ports and URLs (in `README.md`, `docs/architecture.md`, `apps/api/.env.example`, and `apps/web/.env.example`) match the canonical values in `packages/api-contracts/src/runtime-defaults.ts`.
+
+**If it fails**: run `npm run check-drift` locally. The output will identify exactly which file and value is out of sync. Update the drifted file to match `runtime-defaults.ts` (or update `runtime-defaults.ts` if the canonical value itself changed).
+
+### Dependency Integrity Check (`npm run check-integrity`)
+
+Verifies that:
+1. `package-lock.json` is consistent with `package.json` (no lockfile drift).
+2. Workspace packages reference each other at consistent versions.
+3. Critical shared dependencies (`react`, `next`, `@stellar/stellar-sdk`, etc.) use the same version across all packages.
+
+**If it fails**: run `npm run check-integrity` locally. The output will identify the specific package and version mismatch. Common fixes:
+- Run `npm install` and commit the updated `package-lock.json`.
+- Align mismatched workspace dependency versions.
+
+### Job Summary
+
+When the DevOps job runs in CI, a step summary is written to the GitHub Actions run page with a plain-English pass/fail status and remediation hints for each check. No need to dig through raw logs.
+
+### Skipping the DevOps gate
+
+The DevOps job only runs when relevant files change (scripts, `runtime-defaults.ts`, docs, env examples, or lockfiles). If none of those files are touched, the job is skipped and the Required Checks gate treats a skip as a pass.
+
 ## Pull Request Process
 
 1. **Create a branch** from `main`:
