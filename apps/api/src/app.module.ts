@@ -9,6 +9,7 @@ import { WorkspacesModule } from "./modules/workspaces/workspaces.module.js";
 import { VerificationModule } from "./modules/verification/verification.module.js";
 import { ReviewContextModule } from "./modules/review-context/review-context.module.js";
 import { BackgroundJobModule } from "./modules/jobs/background-job.module.js";
+import { WaveModule } from "./modules/wave/wave.module.js";
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { BackgroundJobModule } from "./modules/jobs/background-job.module.js";
     VerificationModule,
     ReviewContextModule,
     BackgroundJobModule,
+    WaveModule,
   ]
 })
 export class AppModule {}
